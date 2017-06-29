@@ -11,7 +11,7 @@ from os.path import join
 
 class LandownershipPallet(Pallet):
     def is_ready_to_ship(self):
-        run_day = 'Monday'
+        run_day = 'Tuesday'
         ready = strftime('%A') == run_day
         if not ready:
             self.success = (True, 'This pallet only runs on {}s.'.format(run_day))
@@ -26,6 +26,7 @@ class LandownershipPallet(Pallet):
         self.log.info('Truncating and appending: ' + agrcLand10)
         arcpy.TruncateTable_management(agrcLand10)
         arcpy.Append_management(sitlaLand, agrcLand10, 'TEST')
+
 
 if __name__ == '__main__':
     import logging
