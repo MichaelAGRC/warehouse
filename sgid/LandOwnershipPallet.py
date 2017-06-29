@@ -3,8 +3,9 @@ LandOwnershipPallet.py
 Truncate and append sitla land ownership into SGID10
 '''
 
+import arcpy
 from forklift.models import Pallet
-from time import strftim
+from time import strftime
 from os.path import join
 
 
@@ -22,6 +23,7 @@ class LandownershipPallet(Pallet):
         sitlaLand = join(cadastre, 'SGID10.CADASTRE.LandOwnership_WeeklyUpdate')
         agrcLand10 = join(cadastre, 'SGID10.CADASTRE.LandOwnership')
 
+        self.log.info('Truncating and appending: ' + agrcLand10)
         arcpy.TruncateTable_management(agrcLand10)
         arcpy.Append_management(sitlaLand, agrcLand10, 'TEST')
 
