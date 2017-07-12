@@ -59,8 +59,8 @@ class SocrataPallet(Pallet):
 
         self.add_crates(['Schools'], {'source_workspace': source_workspace, 'destination_workspace': self.society})
 
-        self.add_crates(['DNROilGasWells'], {'source_workspace': source_workspace,
-                                             'destination_workspace': self.energy})
+        self.add_crates(['OilGasWells'], {'source_workspace': source_workspace,
+                                          'destination_workspace': self.energy})
 
         self.add_crates(['TaxEntities2014'], {'source_workspace': source_workspace,
                                               'destination_workspace': self.economy})
