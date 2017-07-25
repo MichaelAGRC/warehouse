@@ -1,6 +1,7 @@
 *.ags
 *.pyc
 *.sde
-sgid/sgid_secrets.py
+database_maintenance/History/history_secrets.py
 mapserv/sddrafts/
 mapserv/secrets.py
+sgid/sgid_secrets.py
