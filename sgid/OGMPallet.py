@@ -6,11 +6,8 @@ Update SGID data from the DOGM database.
 
 import arcpy
 from forklift.models import Pallet
-from os.path import join, basename, normpath, isdir
-from os import walk, makedirs, sep
-from shutil import rmtree
+from os.path import join, basename
 import sgid_secrets as secrets
-import zipfile
 
 
 #: field names
