@@ -23,7 +23,7 @@ class DOGMPallet(Pallet):
             'source_workspace': sgid,
             'destination_workspace': dogm_stage
         })
-        self.add_crate(('DNROilGasWells', sgid, dogm_stage, WELLS_DESTINATION_NAME))
+        self.add_crate(('OilGasWells', sgid, dogm_stage, WELLS_DESTINATION_NAME))
 
     def process(self):
         dogm_admin = join(self.garage, 'dogm', 'DOGMADMIN@DOGM@dogm.agrc.utah.gov.sde')
