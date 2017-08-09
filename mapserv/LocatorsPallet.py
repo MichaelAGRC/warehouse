@@ -6,8 +6,8 @@ A module that contains a pallet definition for data to support the mapserv roads
 '''
 
 import arcpy
-import locatorsupport.locator_templates
-import locatorsupport.secrets
+import locatorsupport.templates as template
+import locatorsupport.secrets as secrets
 from forklift.arcgis import LightSwitch
 from forklift.models import Crate
 from forklift.models import Pallet
@@ -63,7 +63,7 @@ class LocatorPallet(Pallet):
         self.log.info('dirty locators: %s', ','.join(dirty_locators))
         switch = LightSwitch()
         extraSwitch = None
-        if self.secrets['username'] or self.secrets['password'] orself.secrets['host']:
+        if self.secrets['username'] or self.secrets['password'] or self.secrets['host']:
             extraSwitch = LightSwitch()
             extraSwitch.set_credentials(username=self.secrets['username'], password=self.secrets['password'], host=self.secrets['host'])
 
@@ -146,7 +146,8 @@ class LocatorPallet(Pallet):
 
         start_seconds = clock()
         process_seconds = clock()
-        print('creating the {} locator'.format('streets')) try:
+        print('creating the {} locator'.format('streets'))
+        try:
             output_location = join(self.output_location, 'Roads_AddressSystem_STREET')
             arcpy.geocoding.CreateAddressLocator(
                 in_address_locator_style='US Address - Dual Ranges',
@@ -156,7 +157,7 @@ class LocatorPallet(Pallet):
                 config_keyword='',
                 enable_suggestions='DISABLED')
 
-            self.update_locator_properties(output_location, locator_templates.us_dual_range_addresses)
+            self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
             print(e)
 
@@ -198,7 +199,7 @@ class LocatorPallet(Pallet):
                 config_keyword='',
                 enable_suggestions='DISABLED')
 
-            self.update_locator_properties(output_location, locator_templates.us_dual_range_addresses)
+            self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
             print(e)
 
@@ -240,7 +241,7 @@ class LocatorPallet(Pallet):
                 config_keyword='',
                 enable_suggestions='DISABLED')
 
-            self.update_locator_properties(output_location, locator_templates.us_dual_range_addresses)
+            self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
             print(e)
 
@@ -282,7 +283,7 @@ class LocatorPallet(Pallet):
                 config_keyword='',
                 enable_suggestions='DISABLED')
 
-            self.update_locator_properties(output_location, locator_templates.us_dual_range_addresses)
+            self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
             print(e)
 
@@ -317,7 +318,7 @@ class LocatorPallet(Pallet):
                 config_keyword='',
                 enable_suggestions='DISABLED')
 
-            self.update_locator_properties(output_location, locator_templates.us_single_house_addresses)
+            self.update_locator_properties(output_location, template.us_single_house_addresses)
         except Exception as e:
             print(e)
 
