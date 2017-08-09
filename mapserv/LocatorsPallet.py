@@ -147,7 +147,7 @@ class LocatorsPallet(Pallet):
 
         start_seconds = clock()
         process_seconds = clock()
-        print('creating the {} locator'.format('streets'))
+        self.log.info('creating the %s locator', 'streets')
         try:
             output_location = join(self.output_location, 'Roads_AddressSystem_STREET')
             arcpy.geocoding.CreateAddressLocator(
@@ -160,9 +160,9 @@ class LocatorsPallet(Pallet):
 
             self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
-            print(e)
+            self.log.error(e)
 
-        print('finished {}'.format(format_time(clock() - process_seconds)))
+        self.log.info('finished %s', format_time(clock() - process_seconds))
         process_seconds = clock()
 
         #: acs alias
@@ -189,7 +189,7 @@ class LocatorsPallet(Pallet):
             "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
         ]
 
-        print('creating the {} locator'.format('acs alias'))
+        self.log.info('creating the %s locator', 'acs alias')
         try:
             output_location = join(self.output_location, 'Roads_AddressSystem_ACSALIAS')
             arcpy.geocoding.CreateAddressLocator(
@@ -202,9 +202,9 @@ class LocatorsPallet(Pallet):
 
             self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
-            print(e)
+            self.log.error(e)
 
-        print('finished {}'.format(format_time(clock() - process_seconds)))
+        self.log.info('finished %s', format_time(clock() - process_seconds))
         process_seconds = clock()
 
         #: alias1
@@ -231,7 +231,7 @@ class LocatorsPallet(Pallet):
             "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
         ]
 
-        print('creating the {} locator'.format('alias1'))
+        self.log.info('creating the %s locator', 'alias1')
         try:
             output_location = join(self.output_location, 'Roads_AddressSystem_ALIAS1')
             arcpy.geocoding.CreateAddressLocator(
@@ -244,9 +244,9 @@ class LocatorsPallet(Pallet):
 
             self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
-            print(e)
+            self.log.error(e)
 
-        print('finished {}'.format(format_time(clock() - process_seconds)))
+        self.log.info('finished %s', format_time(clock() - process_seconds))
         process_seconds = clock()
 
         #: alias2
@@ -273,7 +273,7 @@ class LocatorsPallet(Pallet):
             "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
         ]
 
-        print('creating the {} locator'.format('alias2'))
+        self.log.info('creating the %s locator', 'alias2')
         try:
             output_location = join(self.output_location, 'Roads_AddressSystem_ALIAS2')
             arcpy.geocoding.CreateAddressLocator(
@@ -286,9 +286,9 @@ class LocatorsPallet(Pallet):
 
             self.update_locator_properties(output_location, template.us_dual_range_addresses)
         except Exception as e:
-            print(e)
+            self.log.error(e)
 
-        print('finished {}'.format(format_time(clock() - process_seconds)))
+        self.log.info('finished %s', format_time(clock() - process_seconds))
         process_seconds = clock()
 
         fields = [
@@ -308,7 +308,7 @@ class LocatorsPallet(Pallet):
             "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
         ]
 
-        print('creating the {} locator'.format('address points'))
+        self.log.info('creating the %s locator', 'address points')
         try:
             output_location = join(self.output_location, 'AddressPoints_AddressSystem')
             arcpy.geocoding.CreateAddressLocator(
@@ -321,11 +321,25 @@ class LocatorsPallet(Pallet):
 
             self.update_locator_properties(output_location, template.us_single_house_addresses)
         except Exception as e:
-            print(e)
+            self.log.error(e)
 
-        print('finished {}'.format(format_time(clock() - process_seconds)))
-        print('done {}'.format(format_time(clock() - start_seconds)))
+        self.log.info('finished %s', format_time(clock() - process_seconds))
+        self.log.info('done %s', format_time(clock() - start_seconds))
 
     def update_locator_properties(self, locator_path, options_to_append):
         with open(locator_path + '.loc', 'a') as f:
             f.write(options_to_append)
+
+
+if __name__ == '__main__':
+    import logging
+
+    pallet = LocatorsPallet()
+    logging.basicConfig(
+        format='%(levelname)s %(asctime)s %(lineno)s %(message)s',
+        datefmt='%H:%M:%S',
+        level=logging.INFO
+    )
+    pallet.log = logging
+    pallet.build('Dev')
+    pallet.create_locators()
