@@ -61,7 +61,8 @@ class OGMPallet(Pallet):
                 self.log.info('truncating: %s', create_fc)
                 arcpy.management.TruncateTable(create_fc)
 
-        paths = {}
+        downhole_points = {}
+        surface_points = {}
 
         def extract_points(source, destination, x_field, y_field):
             fields = [f.name for f in arcpy.Describe(source).fields]
@@ -88,10 +89,10 @@ class OGMPallet(Pallet):
                             point = (x, y)
 
                         if construct_index is None:
-                            construct = 0
+                            surface_points[row[api_index]] = point
                         else:
                             construct = row[construct_index]
-                        paths.setdefault(row[api_index], {}).setdefault(construct, []).append(point)
+                            downhole_points.setdefault(row[api_index], {}).setdefault(construct, []).append(point)
                     else:
                         point = None
 
@@ -105,9 +106,10 @@ class OGMPallet(Pallet):
 
         self.log.info('building paths in scratch')
         with arcpy.da.InsertCursor(paths_scratch, [API, ConstructNumber, 'SHAPE@']) as paths_cursor:
-            for api in paths:
-                for construct in paths[api]:
-                    points = paths[api][construct]
+            for api in downhole_points:
+                for construct in downhole_points[api]:
+                    points = set([surface_points[api]] + downhole_points[api][construct])
+
                     if len(points) > 1:
                         line = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in points]), UTM12)
                         paths_cursor.insertRow((api, construct, line))
@@ -116,7 +118,6 @@ class OGMPallet(Pallet):
         arcpy.management.MakeFeatureLayer(surface_scratch, jurisdiction_layer)
         arcpy.management.CalculateField(jurisdiction_layer, Jurisdiction, '"state"', 'PYTHON')
         arcpy.management.SelectLayerByLocation(jurisdiction_layer, 'INTERSECT', indian_country)
-        print(arcpy.management.GetCount(jurisdiction_layer))
         arcpy.management.CalculateField(jurisdiction_layer, Jurisdiction, '"indian"', 'PYTHON')
 
         self.log.info('updating SGID from scratch data')
