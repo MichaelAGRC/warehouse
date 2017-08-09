@@ -21,7 +21,7 @@ from shutil import rmtree
 from time import clock
 
 
-class LocatorPallet(Pallet):
+class LocatorsPallet(Pallet):
 
     def build(self, config='Production'):
         self.secrets = secrets.configuration[config]
