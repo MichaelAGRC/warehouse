@@ -106,7 +106,8 @@ class LocatorsPallet(Pallet):
 
     def copy_locator_to(self, file_path, locator, to_folder):
         location = join(file_path, locator)
-        self.log.debug('copying %s to %s', location, to_folder) #: iterator glob for .lox .loc .loc.xml
+        self.log.debug('copying %s to %s', location, to_folder)
+        #: iterator glob for .lox .loc .loc.xml
         for filename in iglob(location + '.lo*'):
             base_folder, locator_with_extension = split(filename)
 
