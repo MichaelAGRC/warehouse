@@ -62,8 +62,10 @@ class LocatorPallet(Pallet):
 
         self.log.info('dirty locators: %s', ','.join(dirty_locators))
         switch = LightSwitch()
-        extraSwitch = LightSwitch()
-        extraSwitch.set_credentials(username=self.secrets['username'], password=self.secrets['password'], host=self.secrets['host'])
+        extraSwitch = None
+        if self.secrets['username'] or self.secrets['password'] orself.secrets['host']:
+            extraSwitch = LightSwitch()
+            extraSwitch.set_credentials(username=self.secrets['username'], password=self.secrets['password'], host=self.secrets['host'])
 
         for locator in dirty_locators:
             #: copy current locator
@@ -77,7 +79,8 @@ class LocatorPallet(Pallet):
 
             self.log.debug('stopping %s', locator)
             switch.ensure('off', [self.services[locator]])
-            extraSwitch.ensure('off', [self.services[locator]])
+            if extraSwitch:
+                extraSwitch.ensure('off', [self.services[locator]])
 
             self.copy_locator_to(rebuild_path, locator, self.secrets['path_to_locators'])
 
@@ -86,7 +89,8 @@ class LocatorPallet(Pallet):
 
             self.log.debug('starting %s', locator)
             switch.ensure('on', [self.services[locator]])
-            extraSwitch.ensure('on', [self.services[locator]])
+            if extraSwitch:
+                extraSwitch.ensure('on', [self.services[locator]])
 
             #: delete rebuilding
             try:
