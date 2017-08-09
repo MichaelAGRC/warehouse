@@ -1,19 +1,19 @@
 configuration = {
-    'dev': {
+    'Dev': {
         'path_to_locators': 'C:\\temp',
         'copy_destinations': ['c:\\temp\\copy_location'],
         'username': None,
         'password': None,
         'host': None
     },
-    'stage': {
+    'Staging': {
         'path_to_locators': None,
         'copy_destinations': [],
         'username': None,
         'password': None,
         'host': None
     },
-    'prod': {
+    'Production': {
         'path_to_locators': None,
         'copy_destinations': [],
         'username': None,

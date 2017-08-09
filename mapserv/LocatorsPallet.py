@@ -23,7 +23,7 @@ from time import clock
 
 class LocatorPallet(Pallet):
 
-    def build(self, config='prod'):
+    def build(self, config='Production'):
         self.secrets = secrets.configuration[config]
         self.configuration = config
         self.output_location = self.secrets['path_to_locators'].replace('\\', '/')
@@ -57,7 +57,7 @@ class LocatorPallet(Pallet):
         if self.get_crates()[1].result[0] in [Crate.CREATED, Crate.UPDATED]:
             dirty_locators += address_point_locators
 
-        if self.configuration == 'test':
+        if self.configuration == 'Dev':
             dirty_locators = ['Roads_AddressSystem_ALIAS1']
 
         self.log.info('dirty locators: %s', ','.join(dirty_locators))
