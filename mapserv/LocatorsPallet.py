@@ -12,8 +12,7 @@ Pre-requisites
 
 Creating the locators
     - Make sure your `Dev` secrets are populated as that configuration will be used
-    - In arcgis pro python execute `LocatorsPallet.py`
-'''
+    - In arcgis pro python execute `LocatorsPallet.py`'''
 
 import arcpy
 import locatorsupport.templates as template
