@@ -2,7 +2,17 @@
 # * coding: utf8 *
 '''
 LocatorPallet.py
-A module that contains a pallet definition for data to support the mapserv roads locator services
+A module that contains a pallet definition for data to support the web api locator services and
+methods to keep them current.
+
+Pre-requisites
+    - The `secrets.py` file has been populated from the template file
+    - The locators in `self.services` have been created
+    - The locators are published to arcgis server
+
+Creating the locators
+    - Make sure your `Dev` secrets are populated as that configuration will be used
+    - In arcgis pro python execute `LocatorsPallet.py`
 '''
 
 import arcpy
