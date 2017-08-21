@@ -28,6 +28,7 @@ from os.path import split
 from shutil import copyfile
 from shutil import rmtree
 from time import clock
+from xml.etree import ElementTree
 
 
 class LocatorsPallet(Pallet):
@@ -343,6 +344,18 @@ class LocatorsPallet(Pallet):
     def update_locator_properties(self, locator_path, options_to_append):
         with open(locator_path + '.loc', 'a') as f:
             f.write(options_to_append)
+
+        self.update_locator_xml(locator_path)
+
+    def update_locator_xml(self, locator_path):
+        locator_path += '.loc.xml'
+
+        tree = ElementTree.parse(locator_path)
+        root = tree.getroot()
+
+        for data_path in root.findall('./locator/ref_data/data_source/workspace_properties/path'):
+
+        tree.write(locator_path)
 
 
 if __name__ == '__main__':
