@@ -354,6 +354,7 @@ class LocatorsPallet(Pallet):
         root = tree.getroot()
 
         for data_path in root.findall('./locator/ref_data/data_source/workspace_properties/path'):
+            data_path.text = self.locators
 
         tree.write(locator_path)
 
