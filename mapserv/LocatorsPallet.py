@@ -17,6 +17,7 @@ Creating the locators
 import arcpy
 import locatorsupport.templates as template
 import locatorsupport.secrets as secrets
+import sys
 from forklift.arcgis import LightSwitch
 from forklift.models import Crate
 from forklift.models import Pallet
@@ -360,6 +361,15 @@ class LocatorsPallet(Pallet):
 
 
 if __name__ == '__main__':
+    '''
+    Usage:
+        python LocatorsPallet.py                            Creates lLocators
+        python LocatorsPallet.py <locator>                  Rebuilds <locator> as Dev
+        python LocatorsPallet.py <locator> <configuration>  Rebuilds <locator> as <configuration>
+    Arguments:
+        locator         Roads or AddressPoints
+        configuration   Dev Staging Production
+    '''
     import logging
 
     pallet = LocatorsPallet()
@@ -369,5 +379,49 @@ if __name__ == '__main__':
         level=logging.INFO
     )
     pallet.log = logging
-    pallet.build('Dev')
-    pallet.create_locators()
+
+    params = len(sys.argv)
+    if params == 1:
+        pallet.build('Dev')
+        logging.info('creating locators')
+        pallet.create_locators()
+    elif params == 2:
+        what = sys.argv[1]
+
+        pallet.build('Dev')
+
+        if what == 'Roads':
+            index = 0
+            logging.info('dirtying roads')
+        elif what == 'AddressPoints':
+            index = 1
+            logging.info('dirtying address points')
+        else:
+            index = 0
+            pallet.get_crates()[1].result = (Crate.UPDATED, None)
+
+        pallet.get_crates()[index].result = (Crate.UPDATED, None)
+
+        logging.info('processing')
+        pallet.process()
+    elif params == 3:
+        what = sys.argv[1]
+        configuration = sys.argv[2]
+
+        pallet.build(configuration)
+
+        logging.info('acting as %s', configuration)
+        if what == 'Roads':
+            index = 0
+            logging.info('dirtying roads')
+        elif what == 'AddressPoints':
+            index = 1
+            logging.info('dirtying address points')
+        else:
+            index = 0
+            pallet.get_crates()[1].result = (Crate.UPDATED, None)
+
+        pallet.get_crates()[index].result = (Crate.UPDATED, None)
+
+        logging.info('processing')
+        pallet.process()
