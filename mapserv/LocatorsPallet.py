@@ -32,6 +32,11 @@ from time import clock
 
 class LocatorsPallet(Pallet):
 
+    def __init__(self):
+        super(LocatorsPallet, self).__init__()
+
+        self.destination_coordinate_system = 26912
+
     def build(self, config='Production'):
         self.secrets = secrets.configuration[config]
         self.configuration = config
