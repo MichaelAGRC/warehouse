@@ -73,7 +73,7 @@ class LocatorsPallet(Pallet):
             dirty_locators += address_point_locators
 
         if self.configuration == 'Dev':
-            dirty_locators = ['Roads_AddressSystem_ALIAS1']
+            dirty_locators = ['Roads_AddressSystem_ALIAS2']
 
         self.log.info('dirty locators: %s', ','.join(dirty_locators))
         switch = LightSwitch()
