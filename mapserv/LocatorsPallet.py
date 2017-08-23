@@ -51,6 +51,7 @@ class LocatorsPallet(Pallet):
         self.services = {'Roads_AddressSystem_ACSALIAS': ('Geolocators/Roads_AddressSystem_ACSALIAS', 'GeocodeServer'),
                          'Roads_AddressSystem_ALIAS1': ('Geolocators/Roads_AddressSystem_ALIAS1', 'GeocodeServer'),
                          'Roads_AddressSystem_ALIAS2': ('Geolocators/Roads_AddressSystem_ALIAS2', 'GeocodeServer'),
+                         'AddressPoints_AddressSystem': ('Geolocators/AddressPoints_AddressSystem', 'GeocodeServer'),
                          'Roads_AddressSystem_STREET': ('Geolocators/Roads_AddressSystem_STREET', 'GeocodeServer')}
 
         self.add_crates(['Roads', 'AddressPoints'],
