@@ -40,42 +40,41 @@ class LocatorsPallet(Pallet):
         self.destination_coordinate_system = 26912
 
     def build(self, config='Production'):
+        #: not to be confused with arcgis_services
+        #: this pallet handles the stopping and starting outside of the forklift routine
+        self.services = {
+            'AddressPoints_AddressSystem': ('Geolocators/AddressPoints_AddressSystem', 'GeocodeServer'),
+            'Roads_AddressSystem_STREET': ('Geolocators/Roads_AddressSystem_STREET', 'GeocodeServer')
+        }
+
         self.secrets = secrets.configuration[config]
         self.configuration = config
         self.output_location = self.secrets['path_to_locators'].replace('\\', '/')
 
-        self.sgid = join(self.garage, 'SGID10.sde')
         self.locators = join(self.staging_rack, 'locators.gdb')
-        #: not to be confused with arcgis_services
-        #: this pallet handles the stopping and starting outside of the forklift routine
-        self.services = {'Roads_AddressSystem_ACSALIAS': ('Geolocators/Roads_AddressSystem_ACSALIAS', 'GeocodeServer'),
-                         'Roads_AddressSystem_ALIAS1': ('Geolocators/Roads_AddressSystem_ALIAS1', 'GeocodeServer'),
-                         'Roads_AddressSystem_ALIAS2': ('Geolocators/Roads_AddressSystem_ALIAS2', 'GeocodeServer'),
-                         'AddressPoints_AddressSystem': ('Geolocators/AddressPoints_AddressSystem', 'GeocodeServer'),
-                         'Roads_AddressSystem_STREET': ('Geolocators/Roads_AddressSystem_STREET', 'GeocodeServer')}
+        self.sgid = join(self.garage, 'SGID10.sde')
+        self.road_grinder = self.secrets['path_to_roadgrinder']
 
-        self.add_crates(['Roads', 'AddressPoints'],
-                        {'source_workspace': self.sgid,
-                         'destination_workspace': self.locators})
+        self.add_crate('AddressPoints', {'source_workspace': self.sgid, 'destination_workspace': self.locators})
+        self.add_crates(['AtlNamesAddrPnts', 'AtlNamesRoads', 'GeocodeRoads'], {'source_workspace': self.road_grinder, 'destination_workspace': self.locators})
 
     def process(self):
-        centerline_locators = [
-            'Roads_AddressSystem_ACSALIAS', 'Roads_AddressSystem_ALIAS1',
-            'Roads_AddressSystem_ALIAS2', 'Roads_AddressSystem_STREET'
-        ]
+        centerline_locators = ['Roads_AddressSystem_STREET']
         address_point_locators = ['AddressPoints_AddressSystem']
         dirty_locators = []
 
-        #: roads
-        if self.get_crates()[0].result[0] in [Crate.CREATED, Crate.UPDATED]:
-            dirty_locators += centerline_locators
+        dirty = set([Crate.CREATED, Crate.UPDATED])
+        crates = self.get_crates()
 
-        #: address points
-        if self.get_crates()[1].result[0] in [Crate.CREATED, Crate.UPDATED]:
+        address_point_results = set([crates[0].result[0], crates[1].result[0]])
+        road_results = set([crates[2].result[0], crates[3].result[0]])
+
+        if len(dirty.intersection(address_point_results)) > 0:
             dirty_locators += address_point_locators
 
-        if self.configuration == 'Dev':
-            dirty_locators = ['Roads_AddressSystem_ALIAS2']
+        #: roads
+        if len(dirty.intersection(road_results)) > 0:
+            dirty_locators += centerline_locators
 
         self.log.info('dirty locators: %s', ','.join(dirty_locators))
         switch = LightSwitch()
@@ -138,199 +137,37 @@ class LocatorsPallet(Pallet):
             copyfile(filename, output)
 
     def create_locators(self):
-        #: streets
+        #: address points
         fields = [
-            "'Feature ID' OBJECTID VISIBLE NONE;'*From Left' L_F_ADD VISIBLE NONE;",
-            "'*To Left' L_T_ADD VISIBLE NONE;'*From Right' R_F_ADD VISIBLE NONE;",
-            "'*To Right' R_T_ADD VISIBLE NONE;'Left Parity' <None> VISIBLE NONE;",
-            "'Right Parity' <None> VISIBLE NONE;'Full Street Name' <None> VISIBLE NONE;",
-            "'Prefix Direction' PREDIR VISIBLE NONE;'Prefix Type' <None> VISIBLE NONE;",
-            "'*Street Name' STREETNAME VISIBLE NONE;'Suffix Type' STREETTYPE VISIBLE NONE;",
-            "'Suffix Direction' SUFDIR VISIBLE NONE;'Left City or Place' ADDR_SYS VISIBLE NONE;",
-            "'Right City or Place' ADDR_SYS VISIBLE NONE;'Left County' <None> VISIBLE NONE;",
-            "'Right County' <None> VISIBLE NONE;'Left State' <None> VISIBLE NONE;",
-            "'Right State' <None> VISIBLE NONE;'Left State Abbreviation' <None> VISIBLE NONE;",
-            "'Right State Abbreviation' <None> VISIBLE NONE;'Left ZIP Code' <None> VISIBLE NONE;",
-            "'Right ZIP Code' <None> VISIBLE NONE;'Country Code' <None> VISIBLE NONE;",
-            "'3-Digit Language Code' <None> VISIBLE NONE;'2-Digit Language Code' <None> VISIBLE NONE;",
-            "'Admin Language Code' <None> VISIBLE NONE;'Left Block ID' <None> VISIBLE NONE;",
-            "'Right Block ID' <None> VISIBLE NONE;'Left Street ID' <None> VISIBLE NONE;",
-            "'Right Street ID' <None> VISIBLE NONE;'Street Rank' <None> VISIBLE NONE;",
-            "'Min X value for extent' <None> VISIBLE NONE;'Max X value for extent' <None> VISIBLE NONE;",
-            "'Min Y value for extent' <None> VISIBLE NONE;'Max Y value for extent' <None> VISIBLE NONE;",
-            "'Left Additional Field' <None> VISIBLE NONE;'Right Additional Field' <None> VISIBLE NONE;",
-            "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
+            "'Primary Table:Point Address ID' AddressPoints:OBJECTID VISIBLE NONE;'Primary Table:Street ID' <None> VISIBLE NONE;",
+            "'*Primary Table:House Number' AddressPoints:AddNum VISIBLE NONE;'Primary Table:Side' <None> VISIBLE NONE;",
+            "'Primary Table:Full Street Name' <None> VISIBLE NONE;'Primary Table:Prefix Direction' AddressPoints:PrefixDir VISIBLE NONE;",
+            "'Primary Table:Prefix Type' <None> VISIBLE NONE;'*Primary Table:Street Name' AddressPoints:STREETNAME VISIBLE NONE;",
+            "'Primary Table:Suffix Type' AddressPoints:STREETTYPE VISIBLE NONE;'Primary Table:Suffix Direction' AddressPoints:SUFFIXDIR VISIBLE NONE;",
+            "'Primary Table:City or Place' AddressPoints:AddSystem VISIBLE NONE;'Primary Table:County' <None> VISIBLE NONE;",
+            "'Primary Table:State' <None> VISIBLE NONE;'Primary Table:State Abbreviation' <None> VISIBLE NONE;'Primary Table:ZIP Code' <None> VISIBLE NONE;",
+            "'Primary Table:Country Code' <None> VISIBLE NONE;'Primary Table:3-Digit Language Code' <None> VISIBLE NONE;",
+            "'Primary Table:2-Digit Language Code' <None> VISIBLE NONE;'Primary Table:Admin Language Code' <None> VISIBLE NONE;",
+            "'Primary Table:Block ID' <None> VISIBLE NONE;'Primary Table:Street Rank' <None> VISIBLE NONE;'Primary Table:Display X' <None> VISIBLE NONE;",
+            "'Primary Table:Display Y' <None> VISIBLE NONE;'Primary Table:Min X value for extent' <None> VISIBLE NONE;",
+            "'Primary Table:Max X value for extent' <None> VISIBLE NONE;'Primary Table:Min Y value for extent' <None> VISIBLE NONE;",
+            "'Primary Table:Max Y value for extent' <None> VISIBLE NONE;'Primary Table:Additional Field' <None> VISIBLE NONE;",
+            "'*Primary Table:Altname JoinID' AddressPoints:UTAddPtID VISIBLE NONE;'Primary Table:City Altname JoinID' <None> VISIBLE NONE;",
+            "'*Alternate Name Table:JoinID' AtlNamesAddrPnts:UTAddPtID VISIBLE NONE;'Alternate Name Table:Full Street Name' <None> VISIBLE NONE;",
+            "'Alternate Name Table:Prefix Direction' AtlNamesAddrPnts:PrefixDir VISIBLE NONE;'Alternate Name Table:Prefix Type' <None> VISIBLE NONE;",
+            "'Alternate Name Table:Street Name' AtlNamesAddrPnts:STREETNAME VISIBLE NONE;",
+            "'Alternate Name Table:Suffix Type' AtlNamesAddrPnts:STREETTYPE VISIBLE NONE;",
+            "'Alternate Name Table:Suffix Direction' AtlNamesAddrPnts:SUFFIXDIR VISIBLE NONE"
         ]
 
         start_seconds = clock()
         process_seconds = clock()
-        self.log.info('creating the %s locator', 'streets')
-        try:
-            output_location = join(self.output_location, 'Roads_AddressSystem_STREET')
-            arcpy.geocoding.CreateAddressLocator(
-                in_address_locator_style='US Address - Dual Ranges',
-                in_reference_data=join(self.locators, "Roads 'Primary Table'"),
-                in_field_map=''.join(fields),
-                out_address_locator=output_location,
-                config_keyword='',
-                enable_suggestions='DISABLED')
-
-            self.update_locator_properties(output_location, template.us_dual_range_addresses)
-        except Exception as e:
-            self.log.error(e)
-
-        self.log.info('finished %s', format_time(clock() - process_seconds))
-        process_seconds = clock()
-
-        #: acs alias
-        fields = [
-            "'Feature ID' OBJECTID VISIBLE NONE;'*From Left' L_F_ADD VISIBLE NONE;",
-            "'*To Left' L_T_ADD VISIBLE NONE;'*From Right' R_F_ADD VISIBLE NONE;",
-            "'*To Right' R_T_ADD VISIBLE NONE;'Left Parity' <None> VISIBLE NONE;",
-            "'Right Parity' <None> VISIBLE NONE;'Full Street Name' <None> VISIBLE NONE;",
-            "'Prefix Direction' PREDIR VISIBLE NONE;'Prefix Type' <None> VISIBLE NONE;",
-            "'*Street Name' ACSNAME VISIBLE NONE;'Suffix Type' <None> VISIBLE NONE;",
-            "'Suffix Direction' ACSSUF VISIBLE NONE;'Left City or Place' ADDR_SYS VISIBLE NONE;",
-            "'Right City or Place' ADDR_SYS VISIBLE NONE;'Left County' <None> VISIBLE NONE;",
-            "'Right County' <None> VISIBLE NONE;'Left State' <None> VISIBLE NONE;",
-            "'Right State' <None> VISIBLE NONE;'Left State Abbreviation' <None> VISIBLE NONE;",
-            "'Right State Abbreviation' <None> VISIBLE NONE;'Left ZIP Code' <None> VISIBLE NONE;",
-            "'Right ZIP Code' <None> VISIBLE NONE;'Country Code' <None> VISIBLE NONE;",
-            "'3-Digit Language Code' <None> VISIBLE NONE;'2-Digit Language Code' <None> VISIBLE NONE;",
-            "'Admin Language Code' <None> VISIBLE NONE;'Left Block ID' <None> VISIBLE NONE;",
-            "'Right Block ID' <None> VISIBLE NONE;'Left Street ID' <None> VISIBLE NONE;",
-            "'Right Street ID' <None> VISIBLE NONE;'Street Rank' <None> VISIBLE NONE;",
-            "'Min X value for extent' <None> VISIBLE NONE;'Max X value for extent' <None> VISIBLE NONE;",
-            "'Min Y value for extent' <None> VISIBLE NONE;'Max Y value for extent' <None> VISIBLE NONE;",
-            "'Left Additional Field' <None> VISIBLE NONE;'Right Additional Field' <None> VISIBLE NONE;",
-            "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
-        ]
-
-        self.log.info('creating the %s locator', 'acs alias')
-        try:
-            output_location = join(self.output_location, 'Roads_AddressSystem_ACSALIAS')
-            arcpy.geocoding.CreateAddressLocator(
-                in_address_locator_style='US Address - Dual Ranges',
-                in_reference_data=join(self.locators, "Roads 'Primary Table'"),
-                in_field_map=''.join(fields),
-                out_address_locator=output_location,
-                config_keyword='',
-                enable_suggestions='DISABLED')
-
-            self.update_locator_properties(output_location, template.us_dual_range_addresses)
-        except Exception as e:
-            self.log.error(e)
-
-        self.log.info('finished %s', format_time(clock() - process_seconds))
-        process_seconds = clock()
-
-        #: alias1
-        fields = [
-            "'Feature ID' OBJECTID VISIBLE NONE;'*From Left' L_F_ADD VISIBLE NONE;",
-            "'*To Left' L_T_ADD VISIBLE NONE;'*From Right' R_F_ADD VISIBLE NONE;",
-            "'*To Right' R_T_ADD VISIBLE NONE;'Left Parity' <None> VISIBLE NONE;",
-            "'Right Parity' <None> VISIBLE NONE;'Full Street Name' <None> VISIBLE NONE;",
-            "'Prefix Direction' PREDIR VISIBLE NONE;'Prefix Type' <None> VISIBLE NONE;",
-            "'*Street Name' ALIAS1 VISIBLE NONE;'Suffix Type' ALIAS1TYPE VISIBLE NONE;",
-            "'Suffix Direction' SUFDIR VISIBLE NONE;'Left City or Place' ADDR_SYS VISIBLE NONE;",
-            "'Right City or Place' ADDR_SYS VISIBLE NONE;'Left County' <None> VISIBLE NONE;",
-            "'Right County' <None> VISIBLE NONE;'Left State' <None> VISIBLE NONE;",
-            "'Right State' <None> VISIBLE NONE;'Left State Abbreviation' <None> VISIBLE NONE;",
-            "'Right State Abbreviation' <None> VISIBLE NONE;'Left ZIP Code' <None> VISIBLE NONE;",
-            "'Right ZIP Code' <None> VISIBLE NONE;'Country Code' <None> VISIBLE NONE;",
-            "'3-Digit Language Code' <None> VISIBLE NONE;'2-Digit Language Code' <None> VISIBLE NONE;",
-            "'Admin Language Code' <None> VISIBLE NONE;'Left Block ID' <None> VISIBLE NONE;",
-            "'Right Block ID' <None> VISIBLE NONE;'Left Street ID' <None> VISIBLE NONE;",
-            "'Right Street ID' <None> VISIBLE NONE;'Street Rank' <None> VISIBLE NONE;",
-            "'Min X value for extent' <None> VISIBLE NONE;'Max X value for extent' <None> VISIBLE NONE;",
-            "'Min Y value for extent' <None> VISIBLE NONE;'Max Y value for extent' <None> VISIBLE NONE;",
-            "'Left Additional Field' <None> VISIBLE NONE;'Right Additional Field' <None> VISIBLE NONE;",
-            "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
-        ]
-
-        self.log.info('creating the %s locator', 'alias1')
-        try:
-            output_location = join(self.output_location, 'Roads_AddressSystem_ALIAS1')
-            arcpy.geocoding.CreateAddressLocator(
-                in_address_locator_style='US Address - Dual Ranges',
-                in_reference_data=join(self.locators, "Roads 'Primary Table'"),
-                in_field_map=''.join(fields),
-                out_address_locator=output_location,
-                config_keyword='',
-                enable_suggestions='DISABLED')
-
-            self.update_locator_properties(output_location, template.us_dual_range_addresses)
-        except Exception as e:
-            self.log.error(e)
-
-        self.log.info('finished %s', format_time(clock() - process_seconds))
-        process_seconds = clock()
-
-        #: alias2
-        fields = [
-            "'Feature ID' OBJECTID VISIBLE NONE;'*From Left' L_F_ADD VISIBLE NONE;",
-            "'*To Left' L_T_ADD VISIBLE NONE;'*From Right' R_F_ADD VISIBLE NONE;",
-            "'*To Right' R_T_ADD VISIBLE NONE;'Left Parity' <None> VISIBLE NONE;",
-            "'Right Parity' <None> VISIBLE NONE;'Full Street Name' <None> VISIBLE NONE;",
-            "'Prefix Direction' PREDIR VISIBLE NONE;'Prefix Type' <None> VISIBLE NONE;",
-            "'*Street Name' ALIAS2 VISIBLE NONE;'Suffix Type' ALIAS2TYPE VISIBLE NONE;",
-            "'Suffix Direction' SUFDIR VISIBLE NONE;'Left City or Place' ADDR_SYS VISIBLE NONE;",
-            "'Right City or Place' ADDR_SYS VISIBLE NONE;'Left County' <None> VISIBLE NONE;",
-            "'Right County' <None> VISIBLE NONE;'Left State' <None> VISIBLE NONE;",
-            "'Right State' <None> VISIBLE NONE;'Left State Abbreviation' <None> VISIBLE NONE;",
-            "'Right State Abbreviation' <None> VISIBLE NONE;'Left ZIP Code' <None> VISIBLE NONE;",
-            "'Right ZIP Code' <None> VISIBLE NONE;'Country Code' <None> VISIBLE NONE;",
-            "'3-Digit Language Code' <None> VISIBLE NONE;'2-Digit Language Code' <None> VISIBLE NONE;",
-            "'Admin Language Code' <None> VISIBLE NONE;'Left Block ID' <None> VISIBLE NONE;",
-            "'Right Block ID' <None> VISIBLE NONE;'Left Street ID' <None> VISIBLE NONE;",
-            "'Right Street ID' <None> VISIBLE NONE;'Street Rank' <None> VISIBLE NONE;",
-            "'Min X value for extent' <None> VISIBLE NONE;'Max X value for extent' <None> VISIBLE NONE;",
-            "'Min Y value for extent' <None> VISIBLE NONE;'Max Y value for extent' <None> VISIBLE NONE;",
-            "'Left Additional Field' <None> VISIBLE NONE;'Right Additional Field' <None> VISIBLE NONE;",
-            "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
-        ]
-
-        self.log.info('creating the %s locator', 'alias2')
-        try:
-            output_location = join(self.output_location, 'Roads_AddressSystem_ALIAS2')
-            arcpy.geocoding.CreateAddressLocator(
-                in_address_locator_style='US Address - Dual Ranges',
-                in_reference_data=join(self.locators, "Roads 'Primary Table'"),
-                in_field_map=''.join(fields),
-                out_address_locator=output_location,
-                config_keyword='',
-                enable_suggestions='DISABLED')
-
-            self.update_locator_properties(output_location, template.us_dual_range_addresses)
-        except Exception as e:
-            self.log.error(e)
-
-        self.log.info('finished %s', format_time(clock() - process_seconds))
-        process_seconds = clock()
-
-        fields = [
-            "'Point Address ID' OBJECTID VISIBLE NONE;'Street ID' <None> VISIBLE NONE;",
-            "'*House Number' AddNum VISIBLE NONE;Side <None> VISIBLE NONE;'Full Street Name' <None> VISIBLE NONE;",
-            "'Prefix Direction' <None> VISIBLE NONE;'Prefix Type' <None> VISIBLE NONE;",
-            "'*Street Name' StreetName VISIBLE NONE;'Suffix Type' StreetType VISIBLE NONE;",
-            "'Suffix Direction' SuffixDir VISIBLE NONE;'City or Place' AddSystem VISIBLE NONE;",
-            "County <None> VISIBLE NONE;State <None> VISIBLE NONE;'State Abbreviation' <None> VISIBLE NONE;",
-            "'ZIP Code' <None> VISIBLE NONE;'Country Code' <None> VISIBLE NONE;",
-            "'3-Digit Language Code' <None> VISIBLE NONE;'2-Digit Language Code' <None> VISIBLE NONE;",
-            "'Admin Language Code' <None> VISIBLE NONE;'Block ID' <None> VISIBLE NONE;",
-            "'Street Rank' <None> VISIBLE NONE;'Display X' <None> VISIBLE NONE;",
-            "'Display Y' <None> VISIBLE NONE;'Min X value for extent' <None> VISIBLE NONE;",
-            "'Max X value for extent' <None> VISIBLE NONE;'Min Y value for extent' <None> VISIBLE NONE;",
-            "'Max Y value for extent' <None> VISIBLE NONE;'Additional Field' <None> VISIBLE NONE;",
-            "'Altname JoinID' <None> VISIBLE NONE;'City Altname JoinID' <None> VISIBLE NONE"
-        ]
-
-        self.log.info('creating the %s locator', 'address points')
+        self.log.info('creating the %s locator', 'address point')
         try:
             output_location = join(self.output_location, 'AddressPoints_AddressSystem')
             arcpy.geocoding.CreateAddressLocator(
                 in_address_locator_style='US Address - Single House',
-                in_reference_data=join(self.locators, "AddressPoints 'Primary Table'"),
+                in_reference_data='{0}/{1};{0}/{2}'.format(self.locators, "AtlNamesAddrPnts 'Alternate Name Table'", "AddressPoints 'Primary Table'"),
                 in_field_map=''.join(fields),
                 out_address_locator=output_location,
                 config_keyword='',
@@ -339,6 +176,54 @@ class LocatorsPallet(Pallet):
             self.update_locator_properties(output_location, template.us_single_house_addresses)
         except Exception as e:
             self.log.error(e)
+
+        self.log.info('finished %s', format_time(clock() - process_seconds))
+        process_seconds = clock()
+
+        #: streets
+        fields = [
+            "'Primary Table:Feature ID' GeocodeRoads:OBJECTID VISIBLE NONE;'*Primary Table:From Left' GeocodeRoads:FROMADDR_L VISIBLE NONE;",
+            "'*Primary Table:To Left' GeocodeRoads:TOADDR_L VISIBLE NONE;'*Primary Table:From Right' GeocodeRoads:FROMADDR_R VISIBLE NONE;",
+            "'*Primary Table:To Right' GeocodeRoads:TOADDR_R VISIBLE NONE;'Primary Table:Left Parity' <None> VISIBLE NONE;",
+            "'Primary Table:Right Parity' <None> VISIBLE NONE;'Primary Table:Full Street Name' <None> VISIBLE NONE;",
+            "'Primary Table:Prefix Direction' GeocodeRoads:PREDIR VISIBLE NONE;'Primary Table:Prefix Type' <None> VISIBLE NONE;",
+            "'*Primary Table:Street Name' GeocodeRoads:NAME VISIBLE NONE;'Primary Table:Suffix Type' GeocodeRoads:POSTTYPE VISIBLE NONE;",
+            "'Primary Table:Suffix Direction' GeocodeRoads:POSTDIR VISIBLE NONE;", "'Primary Table:Left City or Place' GeocodeRoads:ADDRSYS_L VISIBLE NONE;",
+            "'Primary Table:Right City or Place' GeocodeRoads:ADDRSYS_R VISIBLE NONE;'Primary Table:Left County' <None> VISIBLE NONE;",
+            "'Primary Table:Right County' <None> VISIBLE NONE;'Primary Table:Left State' <None> VISIBLE NONE;'Primary Table:Right State' <None> VISIBLE NONE;",
+            "'Primary Table:Left State Abbreviation' <None> VISIBLE NONE;'Primary Table:Right State Abbreviation' <None> VISIBLE NONE;",
+            "'Primary Table:Left ZIP Code' <None> VISIBLE NONE;'Primary Table:Right ZIP Code' <None> VISIBLE NONE;'Primary Table:Country Code' <None> VISIBLE NONE;",
+            "'Primary Table:3-Digit Language Code' <None> VISIBLE NONE;'Primary Table:2-Digit Language Code' <None> VISIBLE NONE;",
+            "'Primary Table:Admin Language Code' <None> VISIBLE NONE;'Primary Table:Left Block ID' <None> VISIBLE NONE;",
+            "'Primary Table:Right Block ID' <None> VISIBLE NONE;'Primary Table:Left Street ID' <None> VISIBLE NONE;",
+            "'Primary Table:Right Street ID' <None> VISIBLE NONE;'Primary Table:Street Rank' <None> VISIBLE NONE;",
+            "'Primary Table:Min X value for extent' <None> VISIBLE NONE;'Primary Table:Max X value for extent' <None> VISIBLE NONE;",
+            "'Primary Table:Min Y value for extent' <None> VISIBLE NONE;'Primary Table:Max Y value for extent' <None> VISIBLE NONE;",
+            "'Primary Table:Left Additional Field' <None> VISIBLE NONE;'Primary Table:Right Additional Field' <None> VISIBLE NONE;",
+            "'*Primary Table:Altname JoinID' GeocodeRoads:GLOBALID_SGID VISIBLE NONE;'Primary Table:City Altname JoinID' <None> VISIBLE NONE;",
+            "'*Alternate Name Table:JoinID' AtlNamesRoads:GLOBALID_SGID VISIBLE NONE;'Alternate Name Table:Full Street Name' <None> VISIBLE NONE;",
+            "'Alternate Name Table:Prefix Direction' AtlNamesRoads:PREDIR VISIBLE NONE;'Alternate Name Table:Prefix Type' <None> VISIBLE NONE;",
+            "'Alternate Name Table:Street Name' AtlNamesRoads:NAME VISIBLE NONE;'Alternate Name Table:Suffix Type' AtlNamesRoads:POSTTYPE VISIBLE NONE;",
+            "'Alternate Name Table:Suffix Direction' AtlNamesRoads:POSTDIR VISIBLE NONE"
+        ]
+
+        self.log.info('creating the %s locator', 'streets')
+        try:
+            output_location = join(self.output_location, 'Roads_AddressSystem_STREET')
+            arcpy.geocoding.CreateAddressLocator(
+                in_address_locator_style='US Address - Dual Ranges',
+                in_reference_data='{0}/{1};{0}/{2}'.format(self.locators, "GeocodeRoads 'Primary Table'", "AtlNamesRoads 'Alternate Name Table'"),
+                in_field_map=''.join(fields),
+                out_address_locator=output_location,
+                config_keyword='',
+                enable_suggestions='DISABLED')
+
+            self.update_locator_properties(output_location, template.us_dual_range_addresses)
+        except Exception as e:
+            self.log.error(e)
+
+        self.log.info('finished %s', format_time(clock() - process_seconds))
+        process_seconds = clock()
 
         self.log.info('finished %s', format_time(clock() - process_seconds))
         self.log.info('done %s', format_time(clock() - start_seconds))
@@ -374,11 +259,7 @@ if __name__ == '__main__':
     import logging
 
     pallet = LocatorsPallet()
-    logging.basicConfig(
-        format='%(levelname)s %(asctime)s %(lineno)s %(message)s',
-        datefmt='%H:%M:%S',
-        level=logging.INFO
-    )
+    logging.basicConfig(format='%(levelname)s %(asctime)s %(lineno)s %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
     pallet.log = logging
 
     params = len(sys.argv)
@@ -392,14 +273,14 @@ if __name__ == '__main__':
         pallet.build('Dev')
 
         if what == 'Roads':
-            index = 0
+            index = 2
             logging.info('dirtying roads')
         elif what == 'AddressPoints':
-            index = 1
+            index = 0
             logging.info('dirtying address points')
         else:
-            index = 0
-            pallet.get_crates()[1].result = (Crate.UPDATED, None)
+            index = 2
+            pallet.get_crates()[0].result = (Crate.UPDATED, None)
 
         pallet.get_crates()[index].result = (Crate.UPDATED, None)
 
@@ -413,14 +294,14 @@ if __name__ == '__main__':
 
         logging.info('acting as %s', configuration)
         if what == 'Roads':
-            index = 0
+            index = 2
             logging.info('dirtying roads')
         elif what == 'AddressPoints':
-            index = 1
+            index = 0
             logging.info('dirtying address points')
         else:
-            index = 0
-            pallet.get_crates()[1].result = (Crate.UPDATED, None)
+            index = 2
+            pallet.get_crates()[0].result = (Crate.UPDATED, None)
 
         pallet.get_crates()[index].result = (Crate.UPDATED, None)
 
