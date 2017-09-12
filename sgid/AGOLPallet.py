@@ -3,12 +3,13 @@ AGOLPallet.py
 A module that contains a pallet definition for the data that gets pushed to AGOL.
 '''
 
+from os.path import basename, join
+
 import arcpy
-from forklift.models import Pallet, Crate
-from os.path import join, basename
 import sgid_secrets as secrets
 from arcgis.gis import GIS
-
+from forklift import core
+from forklift.models import Crate, Pallet
 
 project_folder = r'\\{}\AGRCBackup\AGRC Projects\AGOL\SGID10Mercator'.format(secrets.HNAS)
 SGID10MercatorGDB = join(project_folder, 'SGID10Mercator.gdb')
@@ -30,6 +31,13 @@ class AGOLPallet(Pallet):
             self.layer_lookup[basename(layer.dataSource)] = layer
 
         self.add_crates(list(self.layer_lookup.keys()), {'source_workspace': sgid, 'destination_workspace': SGID10MercatorGDB})
+
+        self.log.info('validating that destination feature classes have FORKLIFT_HASH field')
+        for crate in self.get_crates():
+            if core.hash_field not in [field.name for field in arcpy.Describe(crate.destination).fields]:
+                self.log.info('truncating data and adding missing {} field to {}'.format(core.hash_field, crate.destination_name))
+                arcpy.management.TruncateTable(crate.destination)
+                arcpy.management.AddField(crate.destination, core.hash_field, 'TEXT', field_length=core.hash_field_length)
 
     def process(self):
         updated_crates = [crate for crate in self.get_crates() if crate.result[0] in [Crate.CREATED, Crate.UPDATED]]
