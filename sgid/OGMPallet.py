@@ -75,7 +75,8 @@ class OGMPallet(Pallet):
             except ValueError:
                 #: this field isn't present in the surface points
                 construct_index = None
-            with arcpy.da.SearchCursor(source, fields) as search_cursor, \
+            query = '{} IS NOT NULL AND {} IS NOT NULL'.format(x_field, y_field)
+            with arcpy.da.SearchCursor(source, fields, query) as search_cursor, \
                     arcpy.da.InsertCursor(destination, fields + ['SHAPE@XY']) as insert_cursor:
                 for row in search_cursor:
                     x = row[x_index]
@@ -108,9 +109,13 @@ class OGMPallet(Pallet):
         with arcpy.da.InsertCursor(paths_scratch, [API, ConstructNumber, 'SHAPE@']) as paths_cursor:
             for api in downhole_points:
                 for construct in downhole_points[api]:
-                    points = set([surface_points[api]] + downhole_points[api][construct])
+                    points = [surface_points[api]] + downhole_points[api][construct]
 
-                    if len(points) > 1:
+                    #: remove duplicates while preserving order so that lines go from surface to downholes
+                    unique_points = []
+                    [unique_points.append(point) for point in points if point not in unique_points]
+
+                    if len(unique_points) > 1:
                         line = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in points]), UTM12)
                         paths_cursor.insertRow((api, construct, line))
 
