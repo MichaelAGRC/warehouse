@@ -63,7 +63,7 @@ class LocatorsPallet(Pallet):
         address_point_locators = ['AddressPoints_AddressSystem']
         dirty_locators = []
 
-        dirty = set([Crate.CREATED, Crate.UPDATED])
+        dirty = set([Crate.CREATED, Crate.UPDATED, Crate.WARNING])
         crates = self.get_crates()
 
         address_point_results = set([crates[0].result[0], crates[1].result[0]])
