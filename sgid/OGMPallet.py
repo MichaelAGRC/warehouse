@@ -4,11 +4,11 @@ OGMPallet.py
 Update SGID data from the DOGM database.
 '''
 
-import arcpy
-from forklift.models import Pallet
-from os.path import join, basename
-import sgid_secrets as secrets
+from os.path import basename, join
 
+import arcpy
+import sgid_secrets as secrets
+from forklift.models import Pallet
 
 #: field names
 CoordsSurf_E = 'CoordsSurf_E'
@@ -30,7 +30,7 @@ class OGMPallet(Pallet):
     def build(self, configuration):
         self.configuration = configuration
 
-    def ship(self):
+    def prepare_packaging(self):
         sgid = join(self.garage, 'SGID10_Energy.sde')
         self.sgid = sgid
         dogm = join(self.garage, 'UTRBDMSNET.sde')
@@ -142,4 +142,4 @@ if __name__ == '__main__':
     )
     pallet.log = logging
     pallet.build('Dev')
-    pallet.ship()
+    pallet.prepare_packaging()
