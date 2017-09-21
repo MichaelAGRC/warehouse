@@ -14,7 +14,7 @@ from forklift.models import Crate, Pallet
 project_folder = r'\\{}\AGRCBackup\AGRC Projects\AGOL\SGID10Mercator'.format(secrets.HNAS)
 SGID10MercatorGDB = join(project_folder, 'SGID10Mercator.gdb')
 AGOL_Layers_Project = join(project_folder, 'AGOL_Layers.aprx')
-drafts_folder = join(project_folder, 'sddrafts')
+drafts_folder = arcpy.env.scratchFolder
 
 
 class AGOLPallet(Pallet):
@@ -62,5 +62,8 @@ class AGOLPallet(Pallet):
             arcpy.env.overwriteOutput = original_setting
 
             #: update sharing because for some reason in_public isn't working
-            item = gis.content.search(layer.name, item_type='Feature Service')[0]
-            item.share(True)
+            for item in gis.content.search(layer.name, item_type='Feature Layer'):
+                if item.title == layer.name:
+                    share_item = item
+                    break
+            share_item.share(True)
