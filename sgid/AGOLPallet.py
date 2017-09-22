@@ -14,7 +14,7 @@ from forklift.models import Crate, Pallet
 project_folder = r'\\{}\AGRCBackup\AGRC Projects\AGOL\SGID10Mercator'.format(secrets.HNAS)
 SGID10MercatorGDB = join(project_folder, 'SGID10Mercator.gdb')
 AGOL_Layers_Project = join(project_folder, 'AGOL_Layers.aprx')
-drafts_folder = arcpy.env.scratchFolder
+drafts_folder = join(project_folder, 'sddrafts')
 
 
 class AGOLPallet(Pallet):
