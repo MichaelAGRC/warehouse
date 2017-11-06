@@ -3,7 +3,9 @@ AGOLPallet.py
 A module that contains a pallet definition for the data that gets pushed to AGOL.
 '''
 
+from datetime import timedelta
 from os.path import basename, join
+from time import time
 
 import arcpy
 import sgid_secrets as secrets
@@ -73,9 +75,14 @@ class AGOLPallet(Pallet):
             arcpy.env.overwriteOutput = original_setting
 
             #: update sharing because for some reason in_public isn't working
-            for item in gis.content.search(layer.name, item_type='Feature Layer'):
+            for item in gis.content.search(layer.name, item_type='Feature Layer', sort_field='modified', sort_order='desc'):
                 if item.title == layer.name:
                     share_item = item
+
+                    #: check to see if a brand new service was created
+                    if item.created/1000 > time() - timedelta(minutes=5).total_seconds():
+                        crate.result = (Crate.ERROR, 'New service created! Please notify Michael so that he can sort it out.')
+
                     break
             share_item.share(True)
 
