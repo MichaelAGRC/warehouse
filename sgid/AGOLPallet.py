@@ -13,7 +13,9 @@ from forklift.models import Crate, Pallet
 
 project_folder = r'\\{}\AGRCBackup\AGRC Projects\AGOL\SGID10Mercator'.format(secrets.HNAS)
 SGID10MercatorGDB = join(project_folder, 'SGID10Mercator.gdb')
+ThumbnailExtents = join(project_folder, 'AGOL_Layers.gdb', 'ThumbnailExtents')
 AGOL_Layers_Project = join(project_folder, 'AGOL_Layers.aprx')
+# AGOL_Layers_Project = join(project_folder, 'AGOL_Layers_TEST.aprx')
 drafts_folder = join(project_folder, 'sddrafts')
 
 
@@ -23,11 +25,11 @@ class AGOLPallet(Pallet):
         sgid = join(self.garage, 'SGID10.sde')
 
         self.log.info('getting layers from pro project')
-        agol_map = arcpy.mp.ArcGISProject(AGOL_Layers_Project).listMaps('AGOL')[0]
-        layers = agol_map.listLayers()
+        self.pro_project = arcpy.mp.ArcGISProject(AGOL_Layers_Project)
+        self.agol_map = self.pro_project.listMaps('AGOL')[0]
 
         self.layer_lookup = {}
-        for layer in layers:
+        for layer in self.agol_map.listLayers():
             self.layer_lookup[basename(layer.dataSource)] = layer
 
         self.add_crates(list(self.layer_lookup.keys()), {'source_workspace': sgid, 'destination_workspace': SGID10MercatorGDB})
@@ -49,6 +51,15 @@ class AGOLPallet(Pallet):
 
         for crate in updated_crates:
             layer = self.layer_lookup[crate.destination_name]
+
+            self.toggle_layers(layer)
+
+            with arcpy.da.SearchCursor(ThumbnailExtents, ['SHAPE@'], 'LAYER_NAME = \'{}\''.format(layer.name)) as scursor:
+                for shape, in scursor:
+                    self.agol_map.defaultCamera.setExtent(shape.extent)
+
+            self.pro_project.save()
+
             feature_class_name = basename(layer.dataSource)
             draft = join(drafts_folder, feature_class_name + '.sddraft')
             sd = join(drafts_folder, feature_class_name + '.sd')
@@ -67,3 +78,10 @@ class AGOLPallet(Pallet):
                     share_item = item
                     break
             share_item.share(True)
+
+    def toggle_layers(self, show_layer):
+        #: turn off all layers other than the passed in layer
+        for layer in self.agol_map.listLayers():
+            if layer.name != show_layer.name:
+                layer.visible = False
+        show_layer.visible = True
