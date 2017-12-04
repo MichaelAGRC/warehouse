@@ -109,7 +109,13 @@ class OGMPallet(Pallet):
         with arcpy.da.InsertCursor(paths_scratch, [API, ConstructNumber, 'SHAPE@']) as paths_cursor:
             for api in downhole_points:
                 for construct in downhole_points[api]:
-                    points = [surface_points[api]] + downhole_points[api][construct]
+                    try:
+                        surface_point = surface_points[api]
+                    except KeyError:
+                        #: skip if there is not surface point
+                        continue
+
+                    points = [surface_point] + downhole_points[api][construct]
 
                     #: remove duplicates while preserving order so that lines go from surface to downholes
                     unique_points = []
