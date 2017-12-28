@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # * coding: utf8 *
 '''
-utrans.py
+plssfabric_pallet.py
 
-A module that contains a template for database maintenance pallets
+A module that compresses and analyzes the plss parcel fabric
 '''
 
 from forklift.models import Pallet
