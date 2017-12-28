@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # * coding: utf8 *
 '''
-utrans.py
+ugmp_pallet.py
 
-A module that contains a template for database maintenance pallets
+A module that compresses and analyzes UGMP databases
 '''
 
 from forklift.models import Pallet
